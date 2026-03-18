@@ -165,14 +165,33 @@ def main():
     reply = _tool_round(client, args.model, handler, messages)
     print(f"Assistant: {reply}")
 
-    # Verify it was actually written
-    stored = mem.read(SECRET_PATH)
+    # Verify it was actually written — model may have chosen any path
+    stored = None
+    try:
+        stored = mem.read(SECRET_PATH)
+    except Exception:
+        pass
+
     if not stored:
-        # Model may have chosen a different path — search for it
+        # Search by value across all stored memories
         results = mem.search(SECRET_VALUE)
-        if results:
-            stored = mem.read(results[0].path)
-            SECRET_PATH = results[0].path
+        for r in results:
+            try:
+                candidate = mem.read(r.path)
+                if candidate and SECRET_VALUE in candidate.content:
+                    stored = candidate
+                    SECRET_PATH = r.path
+                    break
+            except Exception:
+                continue
+
+    if not stored:
+        # Last resort: scan all memories
+        for obj in mem.list("/"):
+            if SECRET_VALUE in obj.content:
+                stored = obj
+                SECRET_PATH = obj.path
+                break
 
     if stored and SECRET_VALUE in stored.content:
         print(f"\n  ✓ Confirmed in LLMFS: {stored.path} = '{stored.content}'")
@@ -246,7 +265,10 @@ def main():
     messages.append({"role": "user", "content": recall_prompt})
 
     # Track accessed_at before recall so we can detect if LLMFS was queried
-    before_recall = mem.read(SECRET_PATH)
+    try:
+        before_recall = mem.read(SECRET_PATH)
+    except Exception:
+        before_recall = None
     reply = _tool_round(client, args.model, handler, messages)
     print(f"\nAssistant: {reply}")
 
@@ -254,7 +276,10 @@ def main():
     _divider("Phase 4 — Verdict")
     recalled = SECRET_VALUE in (reply or "")
 
-    refreshed = mem.read(SECRET_PATH)
+    try:
+        refreshed = mem.read(SECRET_PATH)
+    except Exception:
+        refreshed = None
     was_accessed = (
         refreshed
         and before_recall
