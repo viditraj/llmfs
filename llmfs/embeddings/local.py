@@ -47,8 +47,10 @@ class LocalEmbedder(EmbedderBase):
         if self._model is None:
             try:
                 from sentence_transformers import SentenceTransformer
+                print(f"[llmfs] Loading embedder ({self._model_name})…", flush=True)
                 logger.info("Loading sentence-transformer model: %s", self._model_name)
                 self._model = SentenceTransformer(self._model_name)
+                print(f"[llmfs] Embedder ready (dim={self.embedding_dim})", flush=True)
                 logger.info("Model loaded (dim=%d)", self.embedding_dim)
             except ImportError as exc:
                 raise EmbedderError(

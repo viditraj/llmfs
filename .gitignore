@@ -9,3 +9,6 @@ venv/
 .devin/
 llmfs.egg-info/
 .pytest_cache/
+dist/
+build/
+.coverage

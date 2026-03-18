@@ -48,10 +48,10 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/llmfs"
-Documentation = "https://github.com/yourusername/llmfs#readme"
-Repository = "https://github.com/yourusername/llmfs"
-"Bug Tracker" = "https://github.com/yourusername/llmfs/issues"
+Homepage = "https://github.com/viditraj/llmfs"
+Documentation = "https://github.com/viditraj/llmfs#readme"
+Repository = "https://github.com/viditraj/llmfs"
+"Bug Tracker" = "https://github.com/viditraj/llmfs/issues"
 
 [project.scripts]
 llmfs = "llmfs.cli.main:cli"
