@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Sequence
+from collections.abc import Sequence
 
 __all__ = ["ExtractiveSummarizer"]
 
@@ -73,8 +73,8 @@ def _tfidf_scores(sentences: list[str]) -> list[float]:
     if len(sentences) < 2:
         return [1.0] * len(sentences)
     try:
-        from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore[import]
         import numpy as np  # type: ignore[import]
+        from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore[import]
 
         limited = sentences[:_MAX_SENTENCES_FOR_TFIDF]
         vectorizer = TfidfVectorizer(
@@ -115,7 +115,7 @@ def _top_sentences(text: str, max_sentences: int) -> str:
 
     scores = _tfidf_scores(sentences)
     # Pair each sentence with its original index and score
-    indexed = sorted(enumerate(zip(scores, sentences)), key=lambda x: -x[1][0])
+    indexed = sorted(enumerate(zip(scores, sentences, strict=False)), key=lambda x: -x[1][0])
     top_indices = sorted(i for i, _ in indexed[:max_sentences])
     selected = [sentences[i] for i in top_indices]
     return " ".join(selected)

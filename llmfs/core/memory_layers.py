@@ -80,7 +80,7 @@ def ttl_expires_at(layer: str, ttl_minutes: int | None = None) -> str | None:
     return expires.isoformat()
 
 
-def is_expired(memory: "MemoryObject") -> bool:
+def is_expired(memory: MemoryObject) -> bool:
     """Return ``True`` if *memory* has passed its TTL.
 
     Args:

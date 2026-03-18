@@ -245,7 +245,7 @@ class AdaptiveChunker:
         """Convert string segments to :class:`Chunk` objects with offsets."""
         chunks: list[Chunk] = []
         search_start = 0
-        for i, seg in enumerate(segments):
+        for _i, seg in enumerate(segments):
             if not seg:
                 continue
             # Find segment in original to get byte offsets

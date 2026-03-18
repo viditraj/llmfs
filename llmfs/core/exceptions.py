@@ -89,7 +89,7 @@ class MQLParseError(LLMFSError):
     def __init__(self, query: str, reason: str = "", position: int = -1) -> None:
         self.query = query
         self.position = position
-        msg = f"MQL parse error"
+        msg = "MQL parse error"
         if position >= 0:
             msg += f" at position {position}"
         if reason:

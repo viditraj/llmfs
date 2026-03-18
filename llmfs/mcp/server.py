@@ -101,7 +101,6 @@ class LLMFSMCPServer:
         """
         logger.info("Starting LLMFS MCP server (SSE) on %s:%d", host, port)
         # FastMCP reads host/port from constructor; rebuild with custom values
-        from mcp.server.fastmcp import FastMCP as _FastMCP
         self._mcp = self._build_server(host=host, port=port)
         self._mcp.run(transport="sse")
 

@@ -236,7 +236,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
 def handle_tool_call(
     name: str,
     params: dict[str, Any],
-    mem: "MemoryFS",
+    mem: MemoryFS,
 ) -> dict[str, Any]:
     """Dispatch a tool call to the appropriate handler.
 
@@ -270,7 +270,7 @@ def handle_tool_call(
 # ── Individual handlers ────────────────────────────────────────────────────────
 
 
-def _handle_write(params: dict[str, Any], mem: "MemoryFS") -> dict[str, Any]:
+def _handle_write(params: dict[str, Any], mem: MemoryFS) -> dict[str, Any]:
     path = params["path"]
     content = params["content"]
     layer = params.get("layer", "knowledge")
@@ -287,7 +287,7 @@ def _handle_write(params: dict[str, Any], mem: "MemoryFS") -> dict[str, Any]:
     }
 
 
-def _handle_search(params: dict[str, Any], mem: "MemoryFS") -> dict[str, Any]:
+def _handle_search(params: dict[str, Any], mem: MemoryFS) -> dict[str, Any]:
     query = params["query"]
     layer = params.get("layer")
     tags = params.get("tags")
@@ -311,7 +311,7 @@ def _handle_search(params: dict[str, Any], mem: "MemoryFS") -> dict[str, Any]:
     }
 
 
-def _handle_read(params: dict[str, Any], mem: "MemoryFS") -> dict[str, Any]:
+def _handle_read(params: dict[str, Any], mem: MemoryFS) -> dict[str, Any]:
     path = params["path"]
     query = params.get("query")
     obj = mem.read(path, query=query)
@@ -327,7 +327,7 @@ def _handle_read(params: dict[str, Any], mem: "MemoryFS") -> dict[str, Any]:
     }
 
 
-def _handle_update(params: dict[str, Any], mem: "MemoryFS") -> dict[str, Any]:
+def _handle_update(params: dict[str, Any], mem: MemoryFS) -> dict[str, Any]:
     path = params["path"]
     content = params.get("content")
     append = params.get("append")
@@ -343,7 +343,7 @@ def _handle_update(params: dict[str, Any], mem: "MemoryFS") -> dict[str, Any]:
     }
 
 
-def _handle_forget(params: dict[str, Any], mem: "MemoryFS") -> dict[str, Any]:
+def _handle_forget(params: dict[str, Any], mem: MemoryFS) -> dict[str, Any]:
     path = params.get("path")
     layer = params.get("layer")
     older_than = params.get("older_than")
@@ -353,7 +353,7 @@ def _handle_forget(params: dict[str, Any], mem: "MemoryFS") -> dict[str, Any]:
     return result
 
 
-def _handle_relate(params: dict[str, Any], mem: "MemoryFS") -> dict[str, Any]:
+def _handle_relate(params: dict[str, Any], mem: MemoryFS) -> dict[str, Any]:
     source = params["source"]
     target = params["target"]
     relationship = params["relationship"]

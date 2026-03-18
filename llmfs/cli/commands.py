@@ -450,7 +450,9 @@ def cmd_install_mcp(
       llmfs install-mcp --print
     """
     import json
+
     from rich.console import Console
+
     from llmfs.mcp.server import generate_mcp_config, install_mcp_config
 
     console = Console()
@@ -490,6 +492,7 @@ def cmd_query(mql: str, output_json: bool, llmfs_path: str | None) -> None:
       llmfs query 'SELECT memory FROM /events WHERE date > 2026-01-01' --json
     """
     import json as _json
+
     from rich.console import Console
     from rich.table import Table
     console = Console()

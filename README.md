@@ -3,7 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/llmfs.svg)](https://pypi.org/project/llmfs/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/github/actions/workflow/status/your-org/llmfs/ci.yml?label=tests)](https://github.com/your-org/llmfs/actions)
+[![Tests](https://img.shields.io/github/actions/workflow/status/viditraj/llmfs/ci.yml?label=tests)](https://github.com/viditraj/llmfs/actions)
 
 **LLMFS gives LLMs and AI agents persistent, searchable, structured memory — organized like a filesystem.** Instead of losing context when a conversation grows past the token limit, agents offload memories to LLMFS and retrieve exactly what they need, when they need it. The result is zero information loss and an effectively unlimited context window — even over thousands of turns.
 
@@ -226,7 +226,7 @@ pip install "llmfs[dev]"
 ### From Source
 
 ```bash
-git clone https://github.com/your-org/llmfs.git
+git clone https://github.com/viditraj/llmfs.git
 cd llmfs
 pip install -e ".[dev]"
 pytest
@@ -1259,7 +1259,7 @@ Contributions are welcome! LLMFS is an early-stage project and the best areas fo
 
 ```bash
 # Fork and clone
-git clone https://github.com/your-org/llmfs.git
+git clone https://github.com/viditraj/llmfs.git
 cd llmfs
 
 # Create a branch
@@ -1383,7 +1383,7 @@ llmfs/
 
 ### Reporting Issues
 
-Use the [GitHub issue tracker](https://github.com/your-org/llmfs/issues). For bugs, please include:
+Use the [GitHub issue tracker](https://github.com/viditraj/llmfs/issues). For bugs, please include:
 - LLMFS version (`pip show llmfs`)
 - Python version
 - OS

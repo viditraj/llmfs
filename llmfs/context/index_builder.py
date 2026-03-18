@@ -72,7 +72,7 @@ class IndexBuilder:
     def build(
         self,
         session_id: str,
-        mem: "MemoryFS",
+        mem: MemoryFS,
         *,
         max_entries: int | None = None,
     ) -> str:

@@ -270,7 +270,7 @@ class LLMFSToolHandler:
         # result_str is a JSON string suitable as the tool result message
     """
 
-    def __init__(self, mem: "MemoryFS") -> None:
+    def __init__(self, mem: MemoryFS) -> None:
         self._mem = mem
 
     def handle(self, tool_call: Any) -> str:

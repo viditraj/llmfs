@@ -15,7 +15,7 @@ Example::
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from llmfs.core.filesystem import MemoryFS
@@ -115,7 +115,7 @@ Use `memory_search "<topic>"` to retrieve memories by topic, or
 def get_prompt(
     *,
     include_index: bool = False,
-    mem: "MemoryFS | None" = None,
+    mem: MemoryFS | None = None,
     session_id: str | None = None,
     max_entries: int = 50,
 ) -> str:

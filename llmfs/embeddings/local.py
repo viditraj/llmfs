@@ -71,7 +71,7 @@ class LocalEmbedder(EmbedderBase):
     def embedding_dim(self) -> int:
         return self._get_model().get_sentence_embedding_dimension()
 
-    @functools.lru_cache(maxsize=_LRU_SIZE)
+    @functools.lru_cache(maxsize=_LRU_SIZE)  # noqa: B019 — intentional: embedder is module-level singleton
     def embed(self, text: str) -> list[float]:
         """Embed a single string with LRU caching.
 
@@ -134,7 +134,7 @@ class LocalEmbedder(EmbedderBase):
         if uncached_texts:
             try:
                 vecs = self._get_model().encode(uncached_texts, convert_to_numpy=True)
-                for idx, vec in zip(uncached_indices, vecs):
+                for idx, vec in zip(uncached_indices, vecs, strict=False):
                     results[idx] = vec.tolist()
                     # Warm the LRU cache for future single-embed calls
                     self.embed.__wrapped__ = None  # type: ignore[attr-defined]

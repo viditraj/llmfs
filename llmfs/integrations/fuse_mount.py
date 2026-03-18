@@ -124,7 +124,7 @@ class LLMFSFuse(LoggingMixIn, Operations):
             ``"knowledge"``.
     """
 
-    def __init__(self, mem: "MemoryFS", default_layer: str = "knowledge") -> None:
+    def __init__(self, mem: MemoryFS, default_layer: str = "knowledge") -> None:
         self._mem = mem
         self._default_layer = default_layer
         # In-memory open file handles: {fh: {"path": ..., "data": bytes}}
@@ -151,7 +151,6 @@ class LLMFSFuse(LoggingMixIn, Operations):
             return _stat_file(len(raw), ts)
 
         # Check if it's a virtual directory (any memory starts with this prefix)
-        prefix = mem_path.rstrip("/") + "/"
         objects = self._mem.list(mem_path, recursive=True)
         if objects:
             return _stat_dir()
@@ -321,7 +320,7 @@ def mount(
     memory_path: str = "~/.llmfs",
     layer: str = "knowledge",
     foreground: bool = True,
-    mem: "MemoryFS | None" = None,
+    mem: MemoryFS | None = None,
 ) -> None:
     """Mount LLMFS at *mountpoint*.
 
@@ -347,8 +346,8 @@ def unmount(mountpoint: str) -> None:
     Args:
         mountpoint: Directory to unmount.
     """
-    import subprocess
     import platform
+    import subprocess
 
     system = platform.system()
     if system == "Darwin":

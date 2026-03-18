@@ -45,7 +45,7 @@ Example::
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable
+from typing import Any
 
 from llmfs.context.manager import ContextManager
 from llmfs.core.filesystem import MemoryFS
@@ -55,7 +55,8 @@ __all__ = ["ContextMiddleware"]
 logger = logging.getLogger(__name__)
 
 # Rough token estimate: split on whitespace
-_TOKEN_ESTIMATE = lambda text: max(1, len(str(text).split()))
+def _TOKEN_ESTIMATE(text: str) -> int:
+    return max(1, len(str(text).split()))
 
 
 class ContextMiddleware:

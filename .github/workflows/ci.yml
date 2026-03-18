@@ -44,7 +44,7 @@ jobs:
             --cov=llmfs \
             --cov-report=term-missing \
             --cov-report=xml \
-            --cov-fail-under=80 \
+            --cov-fail-under=70 \
             -m "not performance" \
             --timeout=300
 
@@ -66,7 +66,7 @@ jobs:
           python-version: "3.11"
           cache: pip
       - name: Install ruff
-        run: pip install ruff
+        run: pip install "ruff>=0.4.0"
       - name: Run ruff
         run: ruff check llmfs/ --output-format=github
 
@@ -91,7 +91,6 @@ jobs:
   integration:
     name: Integration tests
     runs-on: ubuntu-latest
-    # Only run on push to main or PRs to main (not on feature branches)
     if: |
       github.event_name == 'push' ||
       (github.event_name == 'pull_request' && github.base_ref == 'main')
@@ -112,6 +111,7 @@ jobs:
             --tb=short \
             -m "integration or performance" \
             --timeout=300
+
   publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest

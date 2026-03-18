@@ -36,7 +36,7 @@ from llmfs.core.exceptions import MemoryNotFoundError
 from llmfs.core.memory_object import SearchResult
 from llmfs.embeddings.base import EmbedderBase
 from llmfs.graph.memory_graph import MemoryGraph
-from llmfs.retrieval.ranker import RankConfig, Ranker
+from llmfs.retrieval.ranker import Ranker
 from llmfs.storage.metadata_db import MetadataDB
 from llmfs.storage.vector_store import VectorStore
 
@@ -323,7 +323,6 @@ class RetrievalEngine:
     ) -> list[SearchResult]:
         """Convert raw VectorStore hits to SearchResult objects, applying filters."""
         results: list[SearchResult] = []
-        seen_paths: set[str] = set()
 
         for hit in hits:
             meta = hit.get("metadata", {})

@@ -70,7 +70,7 @@ class MQLExecutor:
         results = executor.execute_mql('SELECT memory FROM / LIMIT 5')
     """
 
-    def __init__(self, mem: "MemoryFS") -> None:
+    def __init__(self, mem: MemoryFS) -> None:
         self._mem = mem
         self._parser = MQLParser()
 
@@ -333,7 +333,7 @@ class MQLExecutor:
 # ── Module-level convenience ──────────────────────────────────────────────────
 
 
-def execute_mql(mql: str, mem: "MemoryFS") -> list[SearchResult]:
+def execute_mql(mql: str, mem: MemoryFS) -> list[SearchResult]:
     """Parse and execute an MQL query string against *mem*.
 
     This is the function wired into ``MemoryFS.query()``.

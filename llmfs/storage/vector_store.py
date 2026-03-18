@@ -173,7 +173,7 @@ class VectorStore:
         metas = res.get("metadatas", [[]])[0]
         dists = res.get("distances", [[]])[0]
 
-        for eid, doc, meta, dist in zip(ids, docs, metas, dists):
+        for eid, doc, meta, dist in zip(ids, docs, metas, dists, strict=False):
             # ChromaDB cosine distance is in [0, 2]; convert to similarity [0, 1]
             score = max(0.0, 1.0 - dist / 2.0)
             results.append({

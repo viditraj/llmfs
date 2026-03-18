@@ -41,7 +41,7 @@ class Chunk:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "Chunk":
+    def from_dict(cls, d: dict[str, Any]) -> Chunk:
         return cls(
             index=d["index"],
             text=d["text"],
@@ -63,7 +63,7 @@ class Summaries:
         return {"level_1": self.level_1, "level_2": self.level_2}
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "Summaries":
+    def from_dict(cls, d: dict[str, Any]) -> Summaries:
         return cls(level_1=d.get("level_1", []), level_2=d.get("level_2", ""))
 
 
@@ -89,7 +89,7 @@ class MemoryMetadata:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "MemoryMetadata":
+    def from_dict(cls, d: dict[str, Any]) -> MemoryMetadata:
         return cls(
             created_at=d.get("created_at", ""),
             modified_at=d.get("modified_at", ""),
@@ -112,7 +112,7 @@ class Relationship:
         return {"target": self.target, "type": self.type, "strength": self.strength}
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "Relationship":
+    def from_dict(cls, d: dict[str, Any]) -> Relationship:
         return cls(
             target=d["target"],
             type=d["type"],
@@ -189,7 +189,7 @@ class MemoryObject:
         return json.dumps(self.to_dict(), indent=2)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "MemoryObject":
+    def from_dict(cls, d: dict[str, Any]) -> MemoryObject:
         """Deserialize from a dictionary produced by :meth:`to_dict`."""
         return cls(
             id=d["id"],
@@ -203,7 +203,7 @@ class MemoryObject:
         )
 
     @classmethod
-    def from_json(cls, s: str) -> "MemoryObject":
+    def from_json(cls, s: str) -> MemoryObject:
         """Deserialize from a JSON string."""
         return cls.from_dict(json.loads(s))
 

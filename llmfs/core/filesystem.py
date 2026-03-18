@@ -168,7 +168,7 @@ class MemoryFS:
 
         # Build Chunk objects with unique embedding IDs and chunk-level summaries
         chunk_objs: list[Chunk] = []
-        for rc, emb, chunk_sum in zip(raw_chunks, embeddings, chunk_summaries):
+        for rc, _emb, chunk_sum in zip(raw_chunks, embeddings, chunk_summaries, strict=False):
             emb_id = f"{mem_id}_{rc.index}"
             chunk_objs.append(Chunk(
                 index=rc.index,

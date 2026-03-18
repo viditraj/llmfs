@@ -98,7 +98,7 @@ class ArtifactExtractor:
     def extract(
         self,
         turn: dict[str, Any],
-        mem: "MemoryFS",
+        mem: MemoryFS,
         session_id: str,
     ) -> list[str]:
         """Extract artifacts from *turn* and write them to *mem*.
@@ -130,7 +130,7 @@ class ArtifactExtractor:
     def extract_and_store_full_turn(
         self,
         turn: dict[str, Any],
-        mem: "MemoryFS",
+        mem: MemoryFS,
         session_id: str,
     ) -> str:
         """Write the *full* turn content to LLMFS as a fallback archive.
@@ -163,7 +163,7 @@ class ArtifactExtractor:
         content: str,
         turn_id: str,
         role: str,
-        mem: "MemoryFS",
+        mem: MemoryFS,
         session_id: str,
     ) -> list[str]:
         paths: list[str] = []
@@ -186,7 +186,7 @@ class ArtifactExtractor:
         content: str,
         turn_id: str,
         role: str,
-        mem: "MemoryFS",
+        mem: MemoryFS,
         session_id: str,
     ) -> list[str]:
         if not _ERROR_INDICATOR_RE.search(content):
@@ -220,7 +220,7 @@ class ArtifactExtractor:
         content: str,
         turn_id: str,
         role: str,
-        mem: "MemoryFS",
+        mem: MemoryFS,
         session_id: str,
     ) -> list[str]:
         refs = list({m.group("path") for m in _FILE_PATH_RE.finditer(content)})
@@ -247,7 +247,7 @@ class ArtifactExtractor:
         content: str,
         turn_id: str,
         role: str,
-        mem: "MemoryFS",
+        mem: MemoryFS,
         session_id: str,
     ) -> list[str]:
         sentences = [m.group("sentence").strip() for m in _DECISION_RE.finditer(content)]

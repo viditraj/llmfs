@@ -53,7 +53,7 @@ def _require_langchain() -> None:
         ) from exc
 
 
-def _get_mem(memory_path: str) -> "MemoryFS":
+def _get_mem(memory_path: str) -> MemoryFS:
     from llmfs import MemoryFS
     return MemoryFS(path=memory_path)
 
@@ -92,7 +92,7 @@ class LLMFSChatMemory:
         memory_path: str = "~/.llmfs",
         *,
         session_prefix: str = "/session/chat",
-        mem: "MemoryFS | None" = None,
+        mem: MemoryFS | None = None,
     ) -> None:
         _require_langchain()
         self._mem = mem or _get_mem(memory_path)
@@ -209,7 +209,7 @@ class LLMFSRetrieverMemory:
         memory_key: str = "memory",
         search_k: int = 3,
         layer: str | None = None,
-        mem: "MemoryFS | None" = None,
+        mem: MemoryFS | None = None,
         input_key: str = "input",
         session_prefix: str = "/session/turns",
     ) -> None:
