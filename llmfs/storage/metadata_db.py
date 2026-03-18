@@ -244,7 +244,8 @@ class MetadataDB:
         Raises:
             StorageError: On SQLite error.
         """
-        sets, params = [], []
+        sets: list[str] = []
+        params: list[Any] = []
         now = self._utcnow()
         sets.append("modified_at = ?")
         params.append(modified_at or now)

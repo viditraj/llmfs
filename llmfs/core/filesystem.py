@@ -150,7 +150,9 @@ class MemoryFS:
             self._db.touch_accessed(path)
             if tags != existing.get("tags", []):
                 self._db.set_tags(existing["id"], tags)
-            obj = self._load_object(self._db.get_file(path))  # re-fetch with updated tags
+            refreshed = self._db.get_file(path)  # re-fetch with updated tags
+            assert refreshed is not None
+            obj = self._load_object(refreshed)
             return obj
 
         # Generate or reuse ID
@@ -257,7 +259,7 @@ class MemoryFS:
                 created_at=existing["created_at"] if existing else now,
                 modified_at=now,
                 tags=tags,
-                ttl=ttl_exp,
+                ttl=ttl_minutes,
                 source=source,
             ),
         )
@@ -598,7 +600,7 @@ class MemoryFS:
 
     # ── GC (public) ───────────────────────────────────────────────────────────
 
-    def query(self, mql: str) -> list[Any]:
+    def query(self, mql: str) -> list[Any]:  # type: ignore[valid-type]
         """Execute an MQL query string and return matching memories.
 
         This is a convenience wrapper around

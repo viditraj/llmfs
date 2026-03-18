@@ -144,8 +144,8 @@ class LLMFSFuse(LoggingMixIn, Operations):
         if obj is not None:
             raw = obj.content.encode("utf-8")
             ts = (
-                float(obj.metadata.updated_at or obj.metadata.created_at or 0)
-                if isinstance(obj.metadata.updated_at, (int, float))
+                float(obj.metadata.modified_at or obj.metadata.created_at or 0)
+                if isinstance(obj.metadata.modified_at, (int, float))
                 else time.time()
             )
             return _stat_file(len(raw), ts)

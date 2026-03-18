@@ -137,7 +137,7 @@ class LocalEmbedder(EmbedderBase):
                 for idx, vec in zip(uncached_indices, vecs, strict=False):
                     results[idx] = vec.tolist()
                     # Warm the LRU cache for future single-embed calls
-                    self.embed.__wrapped__ = None  # type: ignore[attr-defined]
+                    self.embed.__wrapped__ = None  # type: ignore[attr-defined,assignment]
             except Exception as exc:
                 raise EmbedderError(f"Batch encoding failed: {exc}") from exc
 

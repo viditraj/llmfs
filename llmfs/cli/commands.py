@@ -113,6 +113,7 @@ def cmd_write(
     """Write content to PATH in memory.\n\nExamples:\n\n  llmfs write /k/note 'some text'\n\n  llmfs write /k/doc --file README.md"""
     from rich.console import Console
     console = Console()
+    err_console = Console(stderr=True)
 
     if input_file:
         text = Path(input_file).read_text(encoding="utf-8")
@@ -123,7 +124,7 @@ def cmd_write(
         text = click.get_text_stream("stdin").read()
 
     if not text.strip():
-        console.print("[red]No content provided.[/red]", err=True)
+        err_console.print("[red]No content provided.[/red]")
         sys.exit(1)
 
     tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
@@ -144,12 +145,13 @@ def cmd_read(path: str, query: str | None, llmfs_path: str | None) -> None:
     from rich.console import Console
     from rich.panel import Panel
     console = Console()
+    err_console = Console(stderr=True)
 
     mem = _get_mem(llmfs_path)
     try:
         obj = mem.read(path, query=query)
     except Exception as exc:
-        console.print(f"[red]{exc}[/red]", err=True)
+        err_console.print(f"[red]{exc}[/red]")
         sys.exit(1)
 
     console.print(Panel(
@@ -234,6 +236,7 @@ def cmd_update(
     """Update an existing memory at PATH."""
     from rich.console import Console
     console = Console()
+    err_console = Console(stderr=True)
 
     ta = [t.strip() for t in tags_add.split(",") if t.strip()] or None
     tr = [t.strip() for t in tags_remove.split(",") if t.strip()] or None
@@ -242,7 +245,7 @@ def cmd_update(
     try:
         obj = mem.update(path, content=content, append=append, tags_add=ta, tags_remove=tr)
     except Exception as exc:
-        console.print(f"[red]{exc}[/red]", err=True)
+        err_console.print(f"[red]{exc}[/red]")
         sys.exit(1)
 
     console.print(f"[green]Updated[/green] {obj.path}")
@@ -269,9 +272,10 @@ def cmd_forget(
     """Delete memories by PATH, layer, or age."""
     from rich.console import Console
     console = Console()
+    err_console = Console(stderr=True)
 
     if not path and not layer and not older_than:
-        console.print("[red]Provide a path, --layer, or --older-than.[/red]", err=True)
+        err_console.print("[red]Provide a path, --layer, or --older-than.[/red]")
         sys.exit(1)
 
     desc = path or (f"layer={layer}" if layer else f"older than {older_than}")
@@ -282,7 +286,7 @@ def cmd_forget(
     try:
         result = mem.forget(path, layer=layer, older_than=older_than)
     except Exception as exc:
-        console.print(f"[red]{exc}[/red]", err=True)
+        err_console.print(f"[red]{exc}[/red]")
         sys.exit(1)
 
     console.print(f"[green]Deleted {result['deleted']} memor{'y' if result['deleted']==1 else 'ies'}.[/green]")
@@ -307,12 +311,13 @@ def cmd_relate(
     """Create a relationship between two memories."""
     from rich.console import Console
     console = Console()
+    err_console = Console(stderr=True)
 
     mem = _get_mem(llmfs_path)
     try:
         result = mem.relate(source, target, relationship, strength=strength)
     except Exception as exc:
-        console.print(f"[red]{exc}[/red]", err=True)
+        err_console.print(f"[red]{exc}[/red]")
         sys.exit(1)
 
     console.print(
@@ -456,6 +461,7 @@ def cmd_install_mcp(
     from llmfs.mcp.server import generate_mcp_config, install_mcp_config
 
     console = Console()
+    err_console = Console(stderr=True)
     resolved_path = str(_resolve_path(llmfs_path)) if llmfs_path else None
 
     if print_only or client is None:
@@ -466,7 +472,7 @@ def cmd_install_mcp(
     try:
         result = install_mcp_config(client, llmfs_path=resolved_path)
     except Exception as exc:
-        console.print(f"[red]{exc}[/red]", err=True)
+        err_console.print(f"[red]{exc}[/red]")
         sys.exit(1)
 
     console.print(
@@ -496,12 +502,13 @@ def cmd_query(mql: str, output_json: bool, llmfs_path: str | None) -> None:
     from rich.console import Console
     from rich.table import Table
     console = Console()
+    err_console = Console(stderr=True)
 
     mem = _get_mem(llmfs_path)
     try:
         results = mem.query(mql)
     except Exception as exc:
-        console.print(f"[red]{exc}[/red]", err=True)
+        err_console.print(f"[red]{exc}[/red]")
         sys.exit(1)
 
     if not results:
@@ -568,11 +575,12 @@ def cmd_mount(
     """
     from rich.console import Console
     console = Console()
+    err_console = Console(stderr=True)
 
     try:
         from llmfs.integrations.fuse_mount import mount
     except ImportError as exc:
-        console.print(f"[red]{exc}[/red]", err=True)
+        err_console.print(f"[red]{exc}[/red]")
         sys.exit(1)
 
     mem = _get_mem(llmfs_path)
@@ -580,7 +588,7 @@ def cmd_mount(
     try:
         mount(mountpoint, layer=layer, foreground=foreground, mem=mem)
     except Exception as exc:
-        console.print(f"[red]Mount failed: {exc}[/red]", err=True)
+        err_console.print(f"[red]Mount failed: {exc}[/red]")
         sys.exit(1)
 
 
@@ -597,17 +605,18 @@ def cmd_unmount(mountpoint: str) -> None:
     """
     from rich.console import Console
     console = Console()
+    err_console = Console(stderr=True)
 
     try:
         from llmfs.integrations.fuse_mount import unmount
     except ImportError as exc:
-        console.print(f"[red]{exc}[/red]", err=True)
+        err_console.print(f"[red]{exc}[/red]")
         sys.exit(1)
 
     try:
         unmount(mountpoint)
     except Exception as exc:
-        console.print(f"[red]{exc}[/red]", err=True)
+        err_console.print(f"[red]{exc}[/red]")
         sys.exit(1)
 
     console.print(f"[green]Unmounted {mountpoint}[/green]")
