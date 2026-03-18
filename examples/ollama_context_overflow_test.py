@@ -122,7 +122,10 @@ def main():
     parser.add_argument("--model", default="qwen2.5:3b")
     parser.add_argument("--base-url", default="http://localhost:11434/v1")
     parser.add_argument("--filler-turns", type=int, default=20,
-                        help="Number of filler Q&A turns to overflow context (default: 20)")
+                        help="Number of filler Q&A turns (default: 20)")
+    parser.add_argument("--flood-tokens", type=int, default=0,
+                        help="Inject this many tokens of filler text in ONE message "
+                             "(fast way to overflow 32k context, e.g. --flood-tokens 30000)")
     args = parser.parse_args()
 
     client = OpenAI(base_url=args.base_url, api_key="ollama")
@@ -181,25 +184,60 @@ def main():
 
     context_size_after_store = len(messages)
 
-    # ── Phase 2: Flood context with filler ───────────────────────────────────
-    filler_count = min(args.filler_turns, len(FILLER_EXCHANGES))
-    _divider(f"Phase 2 — Flooding context with {filler_count} filler exchanges")
-    print("  (This pushes the secret fact out of the model's context window)\n")
+    # ── Phase 2: Flood context ────────────────────────────────────────────────
+    if args.flood_tokens > 0:
+        # Fast mode: inject one giant message to eat up the context window
+        # ~4 chars per token is a reasonable estimate for English text
+        chars_needed = args.flood_tokens * 4
+        # Repeating paragraph of unrelated text
+        paragraph = (
+            "The history of ancient Rome spans several centuries, beginning with the "
+            "founding of the city in 753 BC according to Roman tradition. The Roman "
+            "Republic was established in 509 BC after the overthrow of the Roman Kingdom. "
+            "During the Republic, Rome expanded its territory through a series of wars, "
+            "including the Punic Wars against Carthage. Julius Caesar crossed the Rubicon "
+            "in 49 BC, leading to a civil war that ended the Republic and gave rise to "
+            "the Roman Empire under Augustus in 27 BC. The empire reached its greatest "
+            "extent under Emperor Trajan in 117 AD. The western empire fell in 476 AD. "
+        )
+        filler_text = (paragraph * (chars_needed // len(paragraph) + 1))[:chars_needed]
+        estimated_tokens = len(filler_text) // 4
 
-    for i, (question, _) in enumerate(FILLER_EXCHANGES[:filler_count]):
-        messages.append({"role": "user", "content": question})
-        msg = _chat(client, args.model, messages)  # no tools — pure filler
+        _divider(f"Phase 2 — Injecting ~{estimated_tokens:,} token filler block (single message)")
+        print("  (This pushes the secret fact out of the model's context window)\n")
+
+        # Inject as a fake prior assistant turn so it's in history but not re-processed
+        messages.append({
+            "role": "user",
+            "content": f"Here is some background reading material:\n\n{filler_text}\n\nOkay, noted."
+        })
+        msg = _chat(client, args.model, messages)
         messages.append(msg.model_dump(exclude_none=True))
-        answer = (msg.content or "")[:60]
-        print(f"  [{i+1:02d}/{filler_count}] Q: {question[:45]:<45}  A: {answer}")
-        time.sleep(0.1)  # be gentle with Ollama
+        print(f"  Filler injected. Context now ~{estimated_tokens + 500:,} tokens.")
+        print(f"  Model ack: {(msg.content or '')[:80]}")
+        total_messages = len(messages)
 
-    total_messages = len(messages)
-    filler_tokens_estimate = filler_count * 80  # rough estimate
-    print(f"\n  Messages in context: {total_messages}")
-    print(f"  Filler messages added: {total_messages - context_size_after_store}")
-    print(f"  Estimated filler tokens: ~{filler_tokens_estimate}")
-    print(f"  Secret stored at message index: ~{context_size_after_store - 2} of {total_messages}")
+    else:
+        # Slow mode: real Q&A round-trips
+        filler_count = min(args.filler_turns, len(FILLER_EXCHANGES))
+        _divider(f"Phase 2 — Flooding context with {filler_count} filler Q&A exchanges")
+        print("  (This pushes the secret fact out of the model's context window)\n")
+
+        for i, (question, _) in enumerate(FILLER_EXCHANGES[:filler_count]):
+            messages.append({"role": "user", "content": question})
+            msg = _chat(client, args.model, messages)
+            messages.append(msg.model_dump(exclude_none=True))
+            answer = (msg.content or "")[:60]
+            print(f"  [{i+1:02d}/{filler_count}] Q: {question[:45]:<45}  A: {answer}")
+            time.sleep(0.1)
+
+        total_messages = len(messages)
+        filler_tokens_estimate = filler_count * 80
+        print(f"\n  Messages in context : {total_messages}")
+        print(f"  Filler messages     : {total_messages - context_size_after_store}")
+        print(f"  Estimated tokens    : ~{filler_tokens_estimate}")
+
+    print(f"  Secret at msg index : ~{context_size_after_store - 2} of {total_messages}")
 
     # ── Phase 3: Ask model to recall without hints ────────────────────────────
     _divider("Phase 3 — Ask naturally, no memory hint")
