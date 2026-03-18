@@ -162,6 +162,8 @@ Guidelines:
 - Use memory_write to store important facts the user mentions, decisions made,
   or key information that might be useful later.
 - Use memory_read when you need the full content of a specific memory.
+- Before calling memory_update, always call memory_search first to find the
+  exact path of the memory you want to update — never guess the path.
 - Prefer /knowledge layer for facts, /session layer for things relevant only to
   this conversation, /short_term for temporary notes.
 - Always be transparent: tell the user when you're storing or retrieving memories.

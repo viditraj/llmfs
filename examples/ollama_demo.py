@@ -118,7 +118,9 @@ def main() -> None:
         "You are a helpful assistant with persistent memory via LLMFS tools. "
         "Use memory_write to store important facts, memory_search to retrieve "
         "relevant context, and memory_read to fetch specific memories by path. "
-        "Always store key facts before answering so they persist for future sessions."
+        "Always store key facts before answering so they persist for future sessions. "
+        "IMPORTANT: Before calling memory_update, always call memory_search first "
+        "to find the exact path of the memory you want to update."
     )
 
     # ── Step 1: Store some knowledge ─────────────────────────────────────────
