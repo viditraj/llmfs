@@ -12,3 +12,4 @@ llmfs.egg-info/
 dist/
 build/
 .coverage
+site/

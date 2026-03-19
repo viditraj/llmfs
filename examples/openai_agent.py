@@ -15,9 +15,10 @@ client is used that returns canned tool_call sequences.  When ``openai``
 IS installed, swap ``MockOpenAIClient`` for the real ``openai.OpenAI()``
 client and remove the canned responses.
 
-LLMFS_TOOLS exposes 6 operations as OpenAI function definitions:
+LLMFS_TOOLS exposes 7 operations as OpenAI function definitions:
   memory_write    memory_read    memory_search
   memory_update   memory_forget  memory_relate
+  memory_list
 
 Run:
     python examples/openai_agent.py

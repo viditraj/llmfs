@@ -1,0 +1,108 @@
+site_name: LLMFS
+site_description: "Filesystem Memory for LLMs and AI Agents — persistent, searchable, structured memory with unlimited context windows"
+site_url: https://viditraj.github.io/llmfs
+repo_url: https://github.com/viditraj/llmfs
+repo_name: viditraj/llmfs
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/viditraj/llmfs
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/llmfs/
+
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX
+
+copyright: Copyright &copy; 2026 LLMFS Contributors — MIT License
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: guide/installation.md
+    - Quick Start: guide/quickstart.md
+    - Architecture: guide/architecture.md
+    - Memory Layers: guide/memory-layers.md
+    - Comparison: guide/comparison.md
+  - Integrations:
+    - MCP Server: integrations/mcp.md
+    - LangChain: integrations/langchain.md
+    - OpenAI Function Calling: integrations/openai.md
+    - FUSE Filesystem: integrations/fuse.md
+  - Reference:
+    - Python API: reference/python-api.md
+    - CLI Reference: reference/cli.md
+    - MQL Query Language: reference/mql.md
+    - Memory Graph: reference/memory-graph.md
+    - Infinite Context: reference/infinite-context.md
+    - Configuration: reference/configuration.md
+  - Examples: examples.md
+  - Contributing: contributing.md

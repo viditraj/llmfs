@@ -61,3 +61,26 @@ python ollama_chat.py --store ~/.my_llmfs   # persists across runs
 | `code_search.py` | Code search use case |
 | `infinite_context.py` | Long context compression |
 | `multi_agent.py` | Multiple agents sharing memory |
+| `ollama_autonomous_memory.py` | Model decides what to store autonomously |
+| `ollama_context_overflow_test.py` | Stress-test context window overflow |
+
+## New features (v0.x)
+
+These features are active by default — existing examples benefit automatically.
+
+- **Hybrid search (BM25 + dense)** — `search()` now fuses FTS5 keyword
+  matches with semantic vector results for better recall. No code changes
+  needed; existing `search()` calls use it transparently.
+- **memory_list tool** — A 7th tool (`memory_list`) is available in both
+  MCP and OpenAI integrations, letting models browse stored memories by
+  path prefix, layer, or limit without a search query.
+- **Persistent embedding cache** — Embeddings are cached in SQLite keyed
+  by `(text_hash, model_name)`, avoiding redundant re-embedding across
+  sessions.
+- **Auto-linking** — After every `write()`, the top-k most similar
+  existing memories are linked with `related_to` edges automatically.
+  Configure via `MemoryFS(auto_link=True, auto_link_threshold=0.75,
+  auto_link_k=3)` or disable with `auto_link=False`.
+- **AsyncMemoryFS** — An async wrapper (`from llmfs import AsyncMemoryFS`)
+  delegates all methods via `asyncio.to_thread()` for use in async
+  frameworks like FastAPI, LangGraph, and CrewAI.
