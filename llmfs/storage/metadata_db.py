@@ -180,11 +180,12 @@ class MetadataDB:
                 raise StorageError(str(exc)) from exc
 
     def _query(self, sql: str, params: tuple = ()) -> list[sqlite3.Row]:
-        """Execute a read statement (no lock needed with WAL)."""
-        try:
-            return self._conn.execute(sql, params).fetchall()
-        except sqlite3.Error as exc:
-            raise StorageError(str(exc)) from exc
+        """Execute a read statement under the lock for thread safety."""
+        with self._lock:
+            try:
+                return self._conn.execute(sql, params).fetchall()
+            except sqlite3.Error as exc:
+                raise StorageError(str(exc)) from exc
 
     # ── File CRUD ─────────────────────────────────────────────────────────────
 
