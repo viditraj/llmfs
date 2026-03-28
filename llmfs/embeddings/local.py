@@ -10,6 +10,8 @@ from __future__ import annotations
 import functools
 import hashlib
 import logging
+import os
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 from llmfs.core.exceptions import EmbedderError
@@ -24,6 +26,35 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_MODEL = "all-MiniLM-L6-v2"
 _LRU_SIZE = 1024
+
+
+@contextmanager
+def _quiet_hf():
+    """Suppress noisy HuggingFace progress bars and warnings during model load."""
+    prev_tok = os.environ.get("TOKENIZERS_PARALLELISM")
+    prev_verb = os.environ.get("HF_HUB_DISABLE_PROGRESS_BARS")
+    try:
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
+        os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
+        # Silence the "Loading weights" tqdm bar from MLX / safetensors
+        _tqdm_log = logging.getLogger("tqdm")
+        _hf_log = logging.getLogger("huggingface_hub")
+        old_tqdm = _tqdm_log.level
+        old_hf = _hf_log.level
+        _tqdm_log.setLevel(logging.ERROR)
+        _hf_log.setLevel(logging.ERROR)
+        yield
+    finally:
+        _tqdm_log.setLevel(old_tqdm)
+        _hf_log.setLevel(old_hf)
+        if prev_tok is None:
+            os.environ.pop("TOKENIZERS_PARALLELISM", None)
+        else:
+            os.environ["TOKENIZERS_PARALLELISM"] = prev_tok
+        if prev_verb is None:
+            os.environ.pop("HF_HUB_DISABLE_PROGRESS_BARS", None)
+        else:
+            os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = prev_verb
 
 
 class LocalEmbedder(EmbedderBase):
@@ -63,18 +94,33 @@ class LocalEmbedder(EmbedderBase):
         if self._model is None:
             try:
                 from sentence_transformers import SentenceTransformer
-                print(f"[llmfs] Loading embedder ({self._model_name})…", flush=True)
-                logger.info("Loading sentence-transformer model: %s", self._model_name)
-                self._model = SentenceTransformer(self._model_name)
-                print(f"[llmfs] Embedder ready (dim={self.embedding_dim})", flush=True)
-                logger.info("Model loaded (dim=%d)", self.embedding_dim)
             except ImportError as exc:
                 raise EmbedderError(
                     "sentence-transformers is not installed. "
                     "Run: pip install sentence-transformers"
                 ) from exc
-            except Exception as exc:
-                raise EmbedderError(f"Failed to load model {self._model_name!r}: {exc}") from exc
+
+            with _quiet_hf():
+                try:
+                    # Fast path: load from local HF cache without network calls.
+                    # SentenceTransformer normally contacts the Hub on every init
+                    # (even when the model is already cached), adding ~80s of
+                    # latency.  local_files_only=True skips that entirely.
+                    logger.info("Loading sentence-transformer model: %s (local cache)", self._model_name)
+                    self._model = SentenceTransformer(
+                        self._model_name, local_files_only=True,
+                    )
+                    logger.info("Model loaded from cache (dim=%d)", self.embedding_dim)
+                except Exception:
+                    # Model not cached yet — download it for the first time.
+                    print(f"[llmfs] Downloading embedder ({self._model_name})…", flush=True)
+                    logger.info("Downloading sentence-transformer model: %s", self._model_name)
+                    try:
+                        self._model = SentenceTransformer(self._model_name)
+                    except Exception as exc:
+                        raise EmbedderError(f"Failed to load model {self._model_name!r}: {exc}") from exc
+                    print(f"[llmfs] Embedder ready (dim={self.embedding_dim})", flush=True)
+                    logger.info("Model downloaded and loaded (dim=%d)", self.embedding_dim)
         return self._model
 
     # ── Persistent cache helpers ──────────────────────────────────────────────

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmfs"
-version = "0.1.4"
+version = "0.1.5"
 description = "A filesystem-metaphor memory layer for LLMs and AI agents"
 readme = "README.md"
 license = "MIT"

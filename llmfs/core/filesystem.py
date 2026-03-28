@@ -2,8 +2,7 @@
 MemoryFS — the main entry point for LLMFS.
 
 Provides a filesystem-metaphor API for storing, retrieving, and searching
-memories.  All state is persisted to a local directory (default ``~/.llmfs``
-or ``.llmfs`` in the current working directory).
+memories.  All state is persisted to a local directory (default ``~/.llmfs``).
 
 Usage::
 
@@ -88,7 +87,8 @@ class MemoryFS:
         self._base.mkdir(parents=True, exist_ok=True)
 
         self._db = MetadataDB(self._base / "metadata.db")
-        self._vs = VectorStore(self._base / "chroma")
+        self._vs: VectorStore | None = None  # lazy-loaded on first use
+        self._vs_dir = self._base / "chroma"
         self._chunker = AdaptiveChunker()
         self._summarizer = ExtractiveSummarizer()
         self._embedder: EmbedderBase | None = embedder  # lazy if None
@@ -108,6 +108,13 @@ class MemoryFS:
             from llmfs.embeddings.local import LocalEmbedder
             self._embedder = LocalEmbedder(cache_db=self._db)
         return self._embedder
+
+    # ── VectorStore (lazy) ────────────────────────────────────────────────────
+
+    def _get_vs(self) -> VectorStore:
+        if self._vs is None:
+            self._vs = VectorStore(self._vs_dir)
+        return self._vs
 
     # ── GC ────────────────────────────────────────────────────────────────────
 
@@ -198,7 +205,7 @@ class MemoryFS:
 
         # Upsert into vector store
         try:
-            self._vs.upsert_batch(
+            self._get_vs().upsert_batch(
                 embedding_ids=[c.embedding_id for c in chunk_objs],
                 embeddings=embeddings,
                 metadatas=[
@@ -313,7 +320,7 @@ class MemoryFS:
         if query and obj.chunks:
             # Focused read: retrieve only matching chunks
             q_emb = self._get_embedder().embed(query)
-            results = self._vs.query(q_emb, k=3, where={"path": {"$eq": path}})
+            results = self._get_vs().query(q_emb, k=3, where={"path": {"$eq": path}})
             if results:
                 obj.content = "\n\n".join(r["text"] for r in results)
 
@@ -368,7 +375,7 @@ class MemoryFS:
         # ── Dense (semantic) retrieval ────────────────────────────────────
         q_emb = self._get_embedder().embed(query)
         where = self._build_where(layer=layer, path_prefix=path_prefix)
-        raw_dense = self._vs.query(q_emb, k=k * 3, where=where or None)
+        raw_dense = self._get_vs().query(q_emb, k=k * 3, where=where or None)
 
         dense_results = self._raw_hits_to_results(
             raw_dense, tags=tags, created_after=created_after,
@@ -481,14 +488,14 @@ class MemoryFS:
             row = self._db.get_file(path)
             if not row:
                 raise MemoryNotFoundError(path)
-            self._vs.delete_by_file_id(row["id"])
+            self._get_vs().delete_by_file_id(row["id"])
             deleted += self._db.delete_file(path)
             self._db.cache_invalidate(path)
 
         elif layer:
             files = self._db.list_files(layer=layer)
             for f in files:
-                self._vs.delete_by_file_id(f["id"])
+                self._get_vs().delete_by_file_id(f["id"])
                 self._db.delete_file(f["path"])
                 deleted += 1
             self._db.cache_invalidate()
@@ -498,7 +505,7 @@ class MemoryFS:
             if cutoff:
                 files = self._db.list_files(created_before=cutoff)
                 for f in files:
-                    self._vs.delete_by_file_id(f["id"])
+                    self._get_vs().delete_by_file_id(f["id"])
                     self._db.delete_file(f["path"])
                     deleted += 1
                 self._db.cache_invalidate()
@@ -590,7 +597,7 @@ class MemoryFS:
         return {
             "total": len(all_files),
             "layers": layers,
-            "chunks": self._vs.count(),
+            "chunks": self._get_vs().count(),
             "disk_mb": round(disk_mb, 2),
             "base_path": str(self._base),
         }
@@ -638,7 +645,7 @@ class MemoryFS:
         # Identify expired file IDs before deleting (for vector store cleanup)
         expired = self._db.list_expired()
         for row in expired:
-            self._vs.delete_by_file_id(row["id"])
+            self._get_vs().delete_by_file_id(row["id"])
         deleted = self._db.expire_ttl()
         logger.info("gc: deleted %d expired memories", deleted)
         return {"deleted": deleted, "status": "ok"}
@@ -764,7 +771,7 @@ class MemoryFS:
         """
         try:
             # Query for neighbours (oversample to filter self)
-            hits = self._vs.query(
+            hits = self._get_vs().query(
                 embedding,
                 k=self._auto_link_k + 5,
             )

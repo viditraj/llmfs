@@ -39,17 +39,14 @@ _PATH_OPTION = click.option(
     envvar="LLMFS_PATH",
     default=None,
     help="Path to the LLMFS storage directory. "
-         "Defaults to .llmfs/ in cwd, or ~/.llmfs.",
+         "Defaults to ~/.llmfs.",
 )
 
 
 def _resolve_path(llmfs_path: str | None) -> Path:
-    """Return the storage path: explicit > .llmfs in cwd > ~/.llmfs."""
+    """Return the storage path: explicit > LLMFS_PATH env > ~/.llmfs."""
     if llmfs_path:
         return Path(llmfs_path)
-    local = Path.cwd() / ".llmfs"
-    if local.exists():
-        return local
     return Path.home() / ".llmfs"
 
 
@@ -68,11 +65,11 @@ def _get_mem(llmfs_path: str | None):
 @click.command()
 @_PATH_OPTION
 def cmd_init(llmfs_path: str | None) -> None:
-    """Initialise a new LLMFS store in the current directory."""
+    """Initialise a new LLMFS store (default: ~/.llmfs)."""
     from rich.console import Console
     console = Console()
 
-    base = Path(llmfs_path) if llmfs_path else Path.cwd() / ".llmfs"
+    base = Path(llmfs_path) if llmfs_path else Path.home() / ".llmfs"
     if base.exists():
         console.print(f"[yellow]LLMFS already initialised at {base}[/yellow]")
         return

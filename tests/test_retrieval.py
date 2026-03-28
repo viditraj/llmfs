@@ -193,7 +193,7 @@ class TestRetrievalEngine:
         from llmfs.retrieval.engine import RetrievalEngine
         return RetrievalEngine(
             db=mem._db,
-            vs=mem._vs,
+            vs=mem._get_vs(),
             embedder=mem._get_embedder(),
         )
 
@@ -249,7 +249,7 @@ class TestRetrievalEngine:
 
         engine_with_graph = RetrievalEngine(
             db=mem._db,
-            vs=mem._vs,
+            vs=mem._get_vs(),
             embedder=mem._get_embedder(),
             graph=graph,
         )

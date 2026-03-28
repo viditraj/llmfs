@@ -21,7 +21,7 @@ Example::
 
     mem = MemoryFS()
     engine = RetrievalEngine(
-        db=mem._db, vs=mem._vs, embedder=mem._get_embedder()
+        db=mem._db, vs=mem._get_vs(), embedder=mem._get_embedder()
     )
     results = engine.search("JWT authentication bug", k=5, layer="knowledge")
 """
@@ -113,7 +113,7 @@ class RetrievalEngine:
 
     Example::
 
-        engine = RetrievalEngine(db=mem._db, vs=mem._vs, embedder=mem._get_embedder())
+        engine = RetrievalEngine(db=mem._db, vs=mem._get_vs(), embedder=mem._get_embedder())
         results = engine.search("auth bug", k=5)
     """
 
