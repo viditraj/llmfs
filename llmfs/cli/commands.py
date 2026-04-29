@@ -23,6 +23,7 @@ __all__ = [
     "cmd_update",
     "cmd_forget",
     "cmd_relate",
+    "cmd_graph",
     "cmd_ls",
     "cmd_status",
     "cmd_gc",
@@ -54,7 +55,9 @@ def _get_mem(llmfs_path: str | None):
     """Instantiate MemoryFS, showing a friendly error if deps are missing."""
     from llmfs import MemoryFS
     try:
-        return MemoryFS(path=_resolve_path(llmfs_path))
+        mem = MemoryFS(path=_resolve_path(llmfs_path))
+        mem.warmup()  # Eagerly load embedder + VectorStore for fast CLI operations
+        return mem
     except Exception as exc:
         click.echo(f"[red]Error initialising LLMFS: {exc}[/red]", err=True)
         sys.exit(1)
@@ -323,6 +326,50 @@ def cmd_relate(
     )
 
 
+# ── graph ─────────────────────────────────────────────────────────────────────
+
+@click.command()
+@click.argument("path_prefix", default="/")
+@click.option("--depth", "-d", default=3, show_default=True,
+              help="Maximum BFS traversal depth.")
+@click.option("--max-nodes", "-n", default=100, show_default=True,
+              help="Maximum nodes to return.")
+@click.option("--rel-type", "-r", default=None,
+              help="Filter to a specific relationship type.")
+@click.option("--format", "output_format", default="json",
+              type=click.Choice(["json", "dot"]),
+              help="Output format.")
+@_PATH_OPTION
+def cmd_graph(
+    path_prefix: str,
+    depth: int,
+    max_nodes: int,
+    rel_type: str | None,
+    output_format: str,
+    llmfs_path: str | None,
+) -> None:
+    """Export the memory relationship graph."""
+    import json as _json
+    from rich.console import Console
+    console = Console()
+
+    mem = _get_mem(llmfs_path)
+    result = mem.graph_data(
+        path_prefix,
+        max_depth=depth,
+        max_nodes=max_nodes,
+        rel_type=rel_type,
+        output_format=output_format,
+    )
+
+    if output_format == "dot":
+        click.echo(result.get("dot", ""))
+    else:
+        console.print(f"[bold]Nodes:[/bold] {result['node_count']}  "
+                      f"[bold]Edges:[/bold] {result['edge_count']}")
+        click.echo(_json.dumps(result, indent=2))
+
+
 # ── ls ────────────────────────────────────────────────────────────────────────
 
 @click.command()
@@ -429,12 +476,8 @@ def cmd_serve(transport: str, port: int | None, llmfs_path: str | None) -> None:
 # ── install-mcp ────────────────────────────────────────────────────────────────
 
 @click.command("install-mcp")
-@click.option(
-    "--client", "-c",
-    type=click.Choice(["claude", "cursor", "continue", "windsurf"]),
-    default=None,
-    help="MCP client to install config for.",
-)
+@click.argument("client", required=False,
+                type=click.Choice(["claude", "cursor", "continue", "windsurf", "copilot"]))
 @click.option("--print", "print_only", is_flag=True,
               help="Print the config JSON to stdout without writing.")
 @_PATH_OPTION

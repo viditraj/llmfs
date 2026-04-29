@@ -9,6 +9,7 @@ import click
 from llmfs.cli.commands import (
     cmd_forget,
     cmd_gc,
+    cmd_graph,
     cmd_init,
     cmd_install_mcp,
     cmd_ls,
@@ -39,6 +40,7 @@ cli.add_command(cmd_query, name="query")
 cli.add_command(cmd_update, name="update")
 cli.add_command(cmd_forget, name="forget")
 cli.add_command(cmd_relate, name="relate")
+cli.add_command(cmd_graph, name="graph")
 cli.add_command(cmd_ls, name="ls")
 cli.add_command(cmd_status, name="status")
 cli.add_command(cmd_gc, name="gc")

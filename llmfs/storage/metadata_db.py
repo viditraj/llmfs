@@ -252,6 +252,51 @@ class MetadataDB:
         result["tags"] = self.get_tags_for_file(result["id"])
         return result
 
+    def get_files_batch(self, paths: list[str]) -> dict[str, dict[str, Any]]:
+        """Batch-fetch file rows by path.
+
+        Args:
+            paths: List of exact paths to look up.
+
+        Returns:
+            Dict mapping path → file row dict (with ``tags`` key) for
+            paths that exist.  Missing paths are omitted.
+        """
+        if not paths:
+            return {}
+        unique = list(set(paths))
+        placeholders = ",".join("?" for _ in unique)
+        rows = self._query(
+            f"SELECT * FROM files WHERE path IN ({placeholders})",
+            tuple(unique),
+        )
+        if not rows:
+            return {}
+        result: dict[str, dict[str, Any]] = {}
+        file_ids = []
+        for row in rows:
+            d = dict(row)
+            result[d["path"]] = d
+            file_ids.append(d["id"])
+        # Batch-fetch tags
+        if file_ids:
+            tag_ph = ",".join("?" for _ in file_ids)
+            tag_rows = self._query(
+                f"""
+                SELECT ft.file_id, t.name FROM file_tags ft
+                JOIN tags t ON t.id = ft.tag_id
+                WHERE ft.file_id IN ({tag_ph})
+                ORDER BY t.name
+                """,
+                tuple(file_ids),
+            )
+            tags_map: dict[str, list[str]] = {}
+            for tr in tag_rows:
+                tags_map.setdefault(tr["file_id"], []).append(tr["name"])
+            for d in result.values():
+                d["tags"] = tags_map.get(d["id"], [])
+        return result
+
     def get_file_by_id(self, file_id: str) -> dict[str, Any] | None:
         """Return a file row by UUID."""
         rows = self._query("SELECT * FROM files WHERE id = ?", (file_id,))
@@ -413,6 +458,39 @@ class MetadataDB:
             (file_id,),
         )
         return [dict(r) for r in rows]
+
+    def insert_chunks_batch(self, chunks: list[dict[str, Any]]) -> None:
+        """Batch-insert chunk rows in a single transaction.
+
+        Args:
+            chunks: List of dicts with keys ``id``, ``file_id``,
+                ``chunk_index``, ``start_offset``, ``end_offset``,
+                ``text``, ``embedding_id``, ``summary``.
+
+        Raises:
+            StorageError: On SQLite error.
+        """
+        if not chunks:
+            return
+        with self._lock:
+            try:
+                self._conn.executemany(
+                    """
+                    INSERT OR REPLACE INTO chunks
+                      (id, file_id, chunk_index, start_offset, end_offset,
+                       text, embedding_id, summary)
+                    VALUES (?,?,?,?,?,?,?,?)
+                    """,
+                    [
+                        (c["id"], c["file_id"], c["chunk_index"],
+                         c["start_offset"], c["end_offset"],
+                         c["text"], c["embedding_id"], c.get("summary", ""))
+                        for c in chunks
+                    ],
+                )
+                self._conn.commit()
+            except sqlite3.Error as exc:
+                raise StorageError(str(exc)) from exc
 
     def delete_chunks(self, file_id: str) -> None:
         """Delete all chunks belonging to a file."""

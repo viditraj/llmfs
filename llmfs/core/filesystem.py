@@ -102,6 +102,7 @@ class MemoryFS:
         self._auto_link = auto_link
         self._auto_link_threshold = auto_link_threshold
         self._auto_link_k = auto_link_k
+        self._ranker: Any = None
 
         self._last_gc: float = 0.0
         self._gc_if_due()
@@ -135,6 +136,14 @@ class MemoryFS:
                 if self._vs is None:
                     self._vs = VectorStore(self._vs_dir)
         return self._vs
+
+    # ── Ranker (lazy) ────────────────────────────────────────────────────────
+
+    def _get_ranker(self) -> Any:
+        if self._ranker is None:
+            from llmfs.retrieval.ranker import Ranker
+            self._ranker = Ranker()
+        return self._ranker
 
     # ── GC ────────────────────────────────────────────────────────────────────
 
@@ -270,17 +279,19 @@ class MemoryFS:
                 )
                 self._db.set_tags(mem_id, tags)
 
-            for c in chunk_objs:
-                self._db.insert_chunk(
-                    id=f"{mem_id}_chunk_{c.index}",
-                    file_id=mem_id,
-                    chunk_index=c.index,
-                    start_offset=c.start_offset,
-                    end_offset=c.end_offset,
-                    text=c.text,
-                    embedding_id=c.embedding_id,
-                    summary=c.summary,
-                )
+            self._db.insert_chunks_batch([
+                {
+                    "id": f"{mem_id}_chunk_{c.index}",
+                    "file_id": mem_id,
+                    "chunk_index": c.index,
+                    "start_offset": c.start_offset,
+                    "end_offset": c.end_offset,
+                    "text": c.text,
+                    "embedding_id": c.embedding_id,
+                    "summary": c.summary,
+                }
+                for c in chunk_objs
+            ])
         except StorageError as exc:
             raise MemoryWriteError(path, str(exc)) from exc
 
@@ -408,9 +419,7 @@ class MemoryFS:
         )
 
         # ── Fuse via Reciprocal Rank Fusion ───────────────────────────────
-        from llmfs.retrieval.ranker import Ranker
-        ranker = Ranker()
-        results = ranker.fuse(dense_results, bm25_results, top_k=k)
+        results = self._get_ranker().fuse(dense_results, bm25_results, top_k=k)
 
         self._db.cache_set(cache_key, [r.to_dict() for r in results])
         return results
@@ -574,6 +583,108 @@ class MemoryFS:
         )
         return {"relationship_id": rel_id, "status": "ok"}
 
+    # ── Graph visualization ────────────────────────────────────────────────
+
+    def graph_data(
+        self,
+        path_prefix: str = "/",
+        *,
+        max_depth: int = 3,
+        max_nodes: int = 100,
+        rel_type: str | None = None,
+        output_format: str = "json",
+    ) -> dict[str, Any]:
+        """Export the memory relationship graph for visualization.
+
+        Traverses edges starting from all memories under *path_prefix* and
+        returns a structure suitable for rendering as a network diagram.
+
+        Args:
+            path_prefix: Root path prefix to start from (default ``"/"``).
+            max_depth: Maximum BFS depth from each root node.
+            max_nodes: Hard cap on total nodes returned.
+            rel_type: Filter to a specific relationship type.
+            output_format: ``"json"`` (default) returns a dict with ``nodes``
+                and ``edges`` lists.  ``"dot"`` returns a Graphviz DOT string
+                in the ``dot`` key.
+
+        Returns:
+            Dict with ``status``, ``node_count``, ``edge_count``, and either
+            ``nodes``/``edges`` (JSON) or ``dot`` (DOT format).
+        """
+        from llmfs.graph.memory_graph import MemoryGraph
+
+        graph = MemoryGraph(self._db)
+        files = self._db.list_files(path_prefix=path_prefix)
+
+        nodes: dict[str, dict[str, Any]] = {}
+        edges: _list[dict[str, Any]] = []
+        seen_edges: set[str] = set()
+
+        for f in files:
+            if len(nodes) >= max_nodes:
+                break
+            path = f["path"]
+            nodes[path] = {
+                "id": path,
+                "layer": f.get("layer", "knowledge"),
+                "tags": f.get("tags", []),
+                "created_at": f.get("created_at", ""),
+            }
+            # Traverse outgoing edges via BFS
+            try:
+                traversal = graph.bfs(
+                    path,
+                    depth=max_depth,
+                    rel_type=rel_type,
+                    max_nodes=max_nodes - len(nodes) + 1,
+                )
+                for visited in traversal.visited:
+                    if visited not in nodes and len(nodes) < max_nodes:
+                        vrow = self._db.get_file(visited)
+                        if vrow:
+                            nodes[visited] = {
+                                "id": visited,
+                                "layer": vrow.get("layer", "knowledge"),
+                                "tags": vrow.get("tags", []),
+                                "created_at": vrow.get("created_at", ""),
+                            }
+                for e in traversal.edges:
+                    if e.id not in seen_edges:
+                        seen_edges.add(e.id)
+                        edges.append({
+                            "source": e.source_path,
+                            "target": e.target_path,
+                            "type": e.rel_type,
+                            "strength": e.strength,
+                        })
+            except Exception:
+                continue
+
+        result: dict[str, Any] = {
+            "status": "ok",
+            "node_count": len(nodes),
+            "edge_count": len(edges),
+        }
+
+        if output_format == "dot":
+            dot_lines = ["digraph llmfs {", "  rankdir=LR;", '  node [shape=box, style=filled, fillcolor="#e8f4f8"];']
+            for n in nodes.values():
+                label = n["id"].replace('"', '\\"')
+                dot_lines.append(f'  "{label}" [tooltip="{n["layer"]}"];')
+            for e in edges:
+                src = e["source"].replace('"', '\\"')
+                tgt = e["target"].replace('"', '\\"')
+                lbl = e["type"].replace('"', '\\"')
+                dot_lines.append(f'  "{src}" -> "{tgt}" [label="{lbl}", penwidth={max(0.5, e["strength"] * 3):.1f}];')
+            dot_lines.append("}")
+            result["dot"] = "\n".join(dot_lines)
+        else:
+            result["nodes"] = _list(nodes.values())
+            result["edges"] = edges
+
+        return result
+
     # ── List ──────────────────────────────────────────────────────────────────
 
     def list(
@@ -680,6 +791,10 @@ class MemoryFS:
         created_after: str | None = None,
     ) -> _list[SearchResult]:
         """Convert ChromaDB raw hits to SearchResult, applying post-filters."""
+        # Batch-fetch all referenced file rows in 2 queries instead of 2N
+        all_paths = list({item["metadata"].get("path", "") for item in raw_hits} - {""})
+        file_rows = self._db.get_files_batch(all_paths)
+
         seen: dict[str, SearchResult] = {}
         for item in raw_hits:
             item_path: str = item["metadata"].get("path", "")
@@ -688,7 +803,7 @@ class MemoryFS:
             if item_path in seen and item["score"] <= seen[item_path].score:
                 continue
 
-            file_row = self._db.get_file(item_path)
+            file_row = file_rows.get(item_path)
             if not file_row:
                 continue
 
@@ -738,6 +853,10 @@ class MemoryFS:
         max_score = max(h["bm25_score"] for h in fts_hits) if fts_hits else 1.0
         max_score = max(max_score, 0.001)  # avoid division by zero
 
+        # Batch-fetch all referenced file rows
+        all_paths = list({h.get("path", "") for h in fts_hits} - {""})
+        file_rows = self._db.get_files_batch(all_paths)
+
         seen: dict[str, SearchResult] = {}
         for hit in fts_hits:
             path = hit.get("path", "")
@@ -748,7 +867,7 @@ class MemoryFS:
             if path in seen and norm_score <= seen[path].score:
                 continue
 
-            file_row = self._db.get_file(path)
+            file_row = file_rows.get(path)
             if not file_row:
                 continue
 

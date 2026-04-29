@@ -24,11 +24,11 @@ class TestToolDefinitions:
     EXPECTED_NAMES = {
         "memory_write", "memory_search", "memory_read",
         "memory_update", "memory_forget", "memory_relate",
-        "memory_list",
+        "memory_graph", "memory_list",
     }
 
-    def test_seven_tools_defined(self):
-        assert len(TOOL_DEFINITIONS) == 7
+    def test_eight_tools_defined(self):
+        assert len(TOOL_DEFINITIONS) == 8
 
     def test_all_names_present(self):
         names = {t["name"] for t in TOOL_DEFINITIONS}
@@ -194,14 +194,14 @@ class TestLLMFSMCPServer:
         assert hasattr(server, "_mcp")
 
     def test_tools_registered(self, mem):
-        """FastMCP should have seven tools registered."""
+        """FastMCP should have eight tools registered."""
         import asyncio
         server = LLMFSMCPServer(mem=mem)
         tools = asyncio.run(server._mcp.list_tools())
         tool_names = {t.name for t in tools}
         assert {"memory_write", "memory_search", "memory_read",
                 "memory_update", "memory_forget", "memory_relate",
-                "memory_list"} == tool_names
+                "memory_graph", "memory_list"} == tool_names
 
 
 # ── Config generation tests ───────────────────────────────────────────────────

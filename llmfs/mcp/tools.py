@@ -228,6 +228,44 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "memory_graph",
+        "description": (
+            "Export the memory relationship graph for visualization. "
+            "Returns nodes and edges showing how memories are related. "
+            "Supports JSON (for programmatic use) and DOT (for Graphviz rendering) output."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path_prefix": {
+                    "type": "string",
+                    "default": "/",
+                    "description": "Only include memories whose path starts here. Defaults to /.",
+                },
+                "max_depth": {
+                    "type": "integer",
+                    "default": 3,
+                    "description": "Maximum BFS traversal depth from each node.",
+                },
+                "max_nodes": {
+                    "type": "integer",
+                    "default": 100,
+                    "description": "Maximum number of nodes to return.",
+                },
+                "rel_type": {
+                    "type": "string",
+                    "description": "Filter to a specific relationship type, e.g. 'related_to', 'caused_by'.",
+                },
+                "output_format": {
+                    "type": "string",
+                    "enum": ["json", "dot"],
+                    "default": "json",
+                    "description": "Output format: 'json' for nodes/edges lists, 'dot' for Graphviz DOT.",
+                },
+            },
+        },
+    },
+    {
         "name": "memory_list",
         "description": (
             "List memories under a path prefix, like 'ls'. "
@@ -284,6 +322,7 @@ def handle_tool_call(
         "memory_update": _handle_update,
         "memory_forget": _handle_forget,
         "memory_relate": _handle_relate,
+        "memory_graph": _handle_graph,
         "memory_list": _handle_list,
     }
     handler = handlers.get(name)
@@ -388,6 +427,21 @@ def _handle_relate(params: dict[str, Any], mem: MemoryFS) -> dict[str, Any]:
     relationship = params["relationship"]
     strength = float(params.get("strength", 0.8))
     return mem.relate(source, target, relationship, strength=strength)
+
+
+def _handle_graph(params: dict[str, Any], mem: MemoryFS) -> dict[str, Any]:
+    path_prefix = params.get("path_prefix", "/")
+    max_depth = int(params.get("max_depth", 3))
+    max_nodes = int(params.get("max_nodes", 100))
+    rel_type = params.get("rel_type")
+    output_format = params.get("output_format", "json")
+    return mem.graph_data(
+        path_prefix,
+        max_depth=max_depth,
+        max_nodes=max_nodes,
+        rel_type=rel_type,
+        output_format=output_format,
+    )
 
 
 def _handle_list(params: dict[str, Any], mem: MemoryFS) -> dict[str, Any]:

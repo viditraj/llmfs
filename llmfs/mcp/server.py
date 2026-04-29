@@ -127,7 +127,7 @@ class LLMFSMCPServer:
         return mcp
 
     def _register_tools(self, mcp: Any) -> None:
-        """Register all seven LLMFS tools on *mcp*."""
+        """Register all eight LLMFS tools on *mcp*."""
         mem = self._mem
 
         @mcp.tool(
@@ -294,6 +294,38 @@ class LLMFSMCPServer:
             )
 
         @mcp.tool(
+            name="memory_graph",
+            description=(
+                "Export the memory relationship graph for visualization. "
+                "Returns nodes and edges showing how memories are related. "
+                "Supports JSON (for programmatic use) and DOT (for Graphviz rendering) output."
+            ),
+        )
+        def memory_graph(
+            path_prefix: str = "/",
+            max_depth: int = 3,
+            max_nodes: int = 100,
+            rel_type: str | None = None,
+            output_format: str = "json",
+        ) -> dict[str, Any]:
+            """Export the memory relationship graph.
+
+            Args:
+                path_prefix: Only include memories whose path starts here.
+                max_depth: Maximum BFS traversal depth from each node.
+                max_nodes: Maximum number of nodes to return.
+                rel_type: Filter to a specific relationship type.
+                output_format: 'json' for nodes/edges lists, 'dot' for Graphviz DOT.
+            """
+            return handle_tool_call(
+                "memory_graph",
+                {"path_prefix": path_prefix, "max_depth": max_depth,
+                 "max_nodes": max_nodes, "rel_type": rel_type,
+                 "output_format": output_format},
+                mem,
+            )
+
+        @mcp.tool(
             name="memory_list",
             description=(
                 "List memories under a path prefix, like 'ls'. "
@@ -357,6 +389,7 @@ _CLIENT_PATHS: dict[str, Path] = {
     "cursor": Path.home() / ".cursor" / "mcp.json",
     "continue": Path.home() / ".continue" / "config.json",
     "windsurf": Path.home() / ".codeium" / "windsurf" / "mcp_config.json",
+    "copilot": Path.home() / ".config" / "github-copilot" / "mcp_config.json",
 }
 
 # Linux fallback for Claude
@@ -376,7 +409,7 @@ def install_mcp_config(
 
     Args:
         client: Target client name (``"claude"``, ``"cursor"``,
-            ``"continue"``, ``"windsurf"``).
+            ``"continue"``, ``"windsurf"``, ``"copilot"``).
         llmfs_path: Optional ``--llmfs-path`` value to embed.
         dry_run: If ``True``, return the config dict without writing.
 
