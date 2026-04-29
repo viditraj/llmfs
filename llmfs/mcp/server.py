@@ -79,6 +79,9 @@ class LLMFSMCPServer:
     ) -> None:
         self._mem = mem
         self._name = name
+        # Eagerly load embedder model + VectorStore so the first tool call
+        # from any MCP client is fast (ms, not seconds).
+        self._mem.warmup()
         self._mcp = self._build_server()
 
     # ── Public API ────────────────────────────────────────────────────────────

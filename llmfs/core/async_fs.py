@@ -80,6 +80,15 @@ class AsyncMemoryFS:
         """Access the underlying synchronous :class:`MemoryFS` instance."""
         return self._sync
 
+    # ── Warmup ────────────────────────────────────────────────────────────────
+
+    async def warmup(self) -> None:
+        """Eagerly load the embedder model and VectorStore.
+
+        Call at process start so the first ``write`` / ``search`` is fast.
+        """
+        await asyncio.to_thread(self._sync.warmup)
+
     # ── Write ─────────────────────────────────────────────────────────────────
 
     async def write(

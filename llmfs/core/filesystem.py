@@ -107,6 +107,18 @@ class MemoryFS:
         self._gc_if_due()
         logger.info("MemoryFS ready at %s", self._base)
 
+    # ── Warmup ────────────────────────────────────────────────────────────────
+
+    def warmup(self) -> None:
+        """Eagerly load the embedder model and VectorStore.
+
+        Call this at process start (e.g. MCP server boot) so the first
+        ``write`` / ``search`` is fast.  Subsequent calls are no-ops.
+        """
+        self._get_embedder()       # loads model into process-wide cache
+        self._get_vs()             # opens ChromaDB collection
+        logger.info("MemoryFS warmup complete")
+
     # ── Embedder (lazy) ───────────────────────────────────────────────────────
 
     def _get_embedder(self) -> EmbedderBase:

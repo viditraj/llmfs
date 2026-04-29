@@ -11,6 +11,7 @@ import functools
 import hashlib
 import logging
 import os
+import threading
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
@@ -26,6 +27,12 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_MODEL = "all-MiniLM-L6-v2"
 _LRU_SIZE = 1024
+
+# Module-level cache: model objects are expensive (~80ms+ to load from disk,
+# seconds on first download).  By caching here, every LocalEmbedder instance
+# in the same process reuses the already-loaded model.
+_MODEL_CACHE: dict[str, Any] = {}
+_MODEL_CACHE_LOCK = threading.Lock()
 
 
 @contextmanager
@@ -88,39 +95,58 @@ class LocalEmbedder(EmbedderBase):
         logger.debug("LocalEmbedder initialised (model=%s, lazy, cache=%s)",
                       model_name, "db" if cache_db else "in-memory")
 
-    # ── Lazy model loading ────────────────────────────────────────────────────
+    # ── Lazy model loading (process-wide singleton) ──────────────────────────
 
     def _get_model(self):  # type: ignore[return]
         if self._model is None:
-            try:
-                from sentence_transformers import SentenceTransformer
-            except ImportError as exc:
-                raise EmbedderError(
-                    "sentence-transformers is not installed. "
-                    "Run: pip install sentence-transformers"
-                ) from exc
+            # Check the module-level cache first (fast path, no lock needed)
+            cached = _MODEL_CACHE.get(self._model_name)
+            if cached is not None:
+                self._model = cached
+                return self._model
 
-            with _quiet_hf():
+            # Slow path: load under lock so only one thread downloads
+            with _MODEL_CACHE_LOCK:
+                # Double-check after acquiring lock
+                cached = _MODEL_CACHE.get(self._model_name)
+                if cached is not None:
+                    self._model = cached
+                    return self._model
+
                 try:
-                    # Fast path: load from local HF cache without network calls.
-                    # SentenceTransformer normally contacts the Hub on every init
-                    # (even when the model is already cached), adding ~80s of
-                    # latency.  local_files_only=True skips that entirely.
-                    logger.info("Loading sentence-transformer model: %s (local cache)", self._model_name)
-                    self._model = SentenceTransformer(
-                        self._model_name, local_files_only=True,
-                    )
-                    logger.info("Model loaded from cache (dim=%d)", self.embedding_dim)
-                except Exception:
-                    # Model not cached yet — download it for the first time.
-                    print(f"[llmfs] Downloading embedder ({self._model_name})…", flush=True)
-                    logger.info("Downloading sentence-transformer model: %s", self._model_name)
+                    from sentence_transformers import SentenceTransformer
+                except ImportError as exc:
+                    raise EmbedderError(
+                        "sentence-transformers is not installed. "
+                        "Run: pip install sentence-transformers"
+                    ) from exc
+
+                with _quiet_hf():
                     try:
-                        self._model = SentenceTransformer(self._model_name)
-                    except Exception as exc:
-                        raise EmbedderError(f"Failed to load model {self._model_name!r}: {exc}") from exc
-                    print(f"[llmfs] Embedder ready (dim={self.embedding_dim})", flush=True)
-                    logger.info("Model downloaded and loaded (dim=%d)", self.embedding_dim)
+                        # Fast path: load from local HF cache without network calls.
+                        # SentenceTransformer normally contacts the Hub on every init
+                        # (even when the model is already cached), adding ~80s of
+                        # latency.  local_files_only=True skips that entirely.
+                        logger.info("Loading sentence-transformer model: %s (local cache)", self._model_name)
+                        model = SentenceTransformer(
+                            self._model_name, local_files_only=True,
+                        )
+                        logger.info("Model loaded from cache (dim=%d)",
+                                    model.get_sentence_embedding_dimension())
+                    except Exception:
+                        # Model not cached yet — download it for the first time.
+                        print(f"[llmfs] Downloading embedder ({self._model_name})…", flush=True)
+                        logger.info("Downloading sentence-transformer model: %s", self._model_name)
+                        try:
+                            model = SentenceTransformer(self._model_name)
+                        except Exception as exc:
+                            raise EmbedderError(f"Failed to load model {self._model_name!r}: {exc}") from exc
+                        print(f"[llmfs] Embedder ready (dim={model.get_sentence_embedding_dimension()})", flush=True)
+                        logger.info("Model downloaded and loaded (dim=%d)",
+                                    model.get_sentence_embedding_dimension())
+
+                _MODEL_CACHE[self._model_name] = model
+                self._model = model
         return self._model
 
     # ── Persistent cache helpers ──────────────────────────────────────────────
