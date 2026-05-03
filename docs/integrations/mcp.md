@@ -30,10 +30,11 @@ This writes or merges the following into your client's config file:
 
 | Client | Config Path |
 |--------|-------------|
-| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `~/.config/Claude/claude_desktop_config.json` (Linux) |
+| Claude Desktop | **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`<br>**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`<br>**Linux**: `~/.config/Claude/claude_desktop_config.json` |
 | Cursor | `~/.cursor/mcp.json` |
-| Windsurf | `~/.codeium/windsurf/mcp_config.json` |
+| Windsurf | **Windows**: `%APPDATA%\Codeium\Windsurf\mcp_config.json`<br>**macOS/Linux**: `~/.codeium/windsurf/mcp_config.json` |
 | Continue | `~/.continue/config.json` |
+| GitHub Copilot | **Windows**: `%APPDATA%\github-copilot\mcp_config.json`<br>**macOS/Linux**: `~/.config/github-copilot/mcp_config.json` |
 
 ## Manual Config
 

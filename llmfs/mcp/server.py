@@ -43,6 +43,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import platform
 from pathlib import Path
 from typing import Any
 
@@ -384,19 +386,45 @@ def generate_mcp_config(
 
 # ── MCP config installer ──────────────────────────────────────────────────────
 
-_CLIENT_PATHS: dict[str, Path] = {
-    "claude": Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json",
-    "cursor": Path.home() / ".cursor" / "mcp.json",
-    "continue": Path.home() / ".continue" / "config.json",
-    "windsurf": Path.home() / ".codeium" / "windsurf" / "mcp_config.json",
-    "copilot": Path.home() / ".config" / "github-copilot" / "mcp_config.json",
-}
+def _get_client_paths() -> dict[str, Path]:
+    """Get platform-specific MCP config paths for each client.
+    
+    Returns different paths based on the operating system:
+    - Windows: Uses AppData\Roaming and AppData\Local
+    - macOS: Uses ~/Library/Application Support
+    - Linux: Uses ~/.config
+    """
+    home = Path.home()
+    system = platform.system()
+    
+    if system == "Windows":
+        appdata = Path(os.getenv("APPDATA", home / "AppData" / "Roaming"))
+        return {
+            "claude": appdata / "Claude" / "claude_desktop_config.json",
+            "cursor": home / ".cursor" / "mcp.json",
+            "continue": home / ".continue" / "config.json",
+            "windsurf": appdata / "Codeium" / "Windsurf" / "mcp_config.json",
+            "copilot": appdata / "github-copilot" / "mcp_config.json",
+        }
+    elif system == "Darwin":  # macOS
+        return {
+            "claude": home / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json",
+            "cursor": home / ".cursor" / "mcp.json",
+            "continue": home / ".continue" / "config.json",
+            "windsurf": home / ".codeium" / "windsurf" / "mcp_config.json",
+            "copilot": home / ".config" / "github-copilot" / "mcp_config.json",
+        }
+    else:  # Linux and others
+        return {
+            "claude": home / ".config" / "Claude" / "claude_desktop_config.json",
+            "cursor": home / ".cursor" / "mcp.json",
+            "continue": home / ".continue" / "config.json",
+            "windsurf": home / ".codeium" / "windsurf" / "mcp_config.json",
+            "copilot": home / ".config" / "github-copilot" / "mcp_config.json",
+        }
 
-# Linux fallback for Claude
-if not (_CLIENT_PATHS["claude"]).parent.exists():
-    _CLIENT_PATHS["claude"] = (
-        Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
-    )
+
+_CLIENT_PATHS: dict[str, Path] = _get_client_paths()
 
 
 def install_mcp_config(
