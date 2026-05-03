@@ -349,8 +349,8 @@ def cmd_graph(
     llmfs_path: str | None,
 ) -> None:
     """Export the memory relationship graph."""
-    import json as _json
     from rich.console import Console
+    import json as _json
     console = Console()
 
     mem = _get_mem(llmfs_path)
